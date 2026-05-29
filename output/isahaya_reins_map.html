@@ -174,7 +174,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   <span class="badge">🌿 土地 317件</span>
   <span class="badge">🏠 中古住宅 228件</span>
   <span class="badge">🏢 マンション 17件</span>
-  <span id="updated">更新: 2026年05月30日 08:53</span>
+  <span id="updated">更新: 2026年05月30日 08:56</span>
 </div>
 <div id="wrap">
   <div id="sidebar">
@@ -244,54 +244,70 @@ function makeIcon(color, emoji) {
   });
 }
 
-const propMarkers = {};
-PROPS.forEach((p, i) => {
-  const marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.color, p.icon) });
+// 物件データをIDで引けるようにグローバル管理
+const PROP_MAP = {};
+PROPS.forEach(p => { PROP_MAP[p.id] = p; });
+
+// ポップアップHTMLをグローバル関数として定義（マーク変更後の再描画用）
+function buildPopupHtml(pid) {
+  const p = PROP_MAP[pid];
+  if (!p) return '';
   const sqmStr = p.area_sqm ? `${p.area_sqm.toFixed(1)}㎡` : "";
   const tsuboStr = p.tsubo ? ` / ${p.tsubo}坪` : "";
   const ptStr = p.price_per_tsubo ? `<div class="popup-row"><span>坪単価：</span><b>${p.price_per_tsubo.toLocaleString()}円</b></div>` : "";
   const bcStr = p.building_condition ? `<div class="popup-row"><span>建築条件：</span>${p.building_condition}</div>` : "";
-  const propNo = p.id.replace(/^[^_]+_/, '');
+  const propNo = pid.replace(/^[^_]+_/, '');
   const srcTag = `<span class="source-tag ${p.source==='宅建'?'source-takken':'source-reins'}">${p.source}</span>`;
   const urlStr = p.url ? `<div style="margin-top:6px"><a href="${p.url}" target="_blank" style="color:#2980b9;font-size:0.8rem;">詳細を見る →</a></div>` : "";
+  const mark = marks[pid];
+  const COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#2980b9','#8e44ad'];
+  const colorBtns = COLORS.map(c =>
+    `<div onclick="setMarkAndRefresh('${pid}','${c}')"
+      style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;
+             border:${mark&&mark.color===c?'3px solid #333':'2px solid #fff'};
+             box-shadow:0 1px 3px rgba(0,0,0,0.3);flex-shrink:0"></div>`
+  ).join('');
+  const clearBtn = `<div onclick="setMarkAndRefresh('${pid}','')"
+    style="width:24px;height:24px;border-radius:50%;background:#eee;border:2px dashed #aaa;
+           cursor:pointer;display:flex;align-items:center;justify-content:center;
+           font-size:12px;color:#999;flex-shrink:0">×</div>`;
+  const markStatus = mark
+    ? `<div style="margin-top:4px;font-size:0.75rem;color:#555">● <b style="color:${mark.color}">${mark.label||'マーク済み'}</b></div>`
+    : '';
+  return `
+    <div class="popup-title">${p.icon} ${LABELS[p.category]||p.category} ${srcTag}</div>
+    <div class="popup-price" style="color:${p.color}">${p.price}</div>
+    <div class="popup-row"><span>住所：</span>${p.address}</div>
+    ${sqmStr ? `<div class="popup-row"><span>面積：</span>${sqmStr}${tsuboStr}</div>` : ""}
+    ${ptStr}${bcStr}
+    <div class="popup-row"><span>初回掲載：</span>${p.first_seen}</div>
+    <div class="popup-propno">物件番号：${propNo}</div>
+    ${urlStr}
+    <div style="margin-top:8px;border-top:1px solid #eee;padding-top:6px">
+      <div style="font-size:0.75rem;color:#888;margin-bottom:5px">🎨 マーク色：</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        ${clearBtn}${colorBtns}
+      </div>
+      ${markStatus}
+    </div>
+  `;
+}
 
-  const buildPopup = (pid) => {
-    const mark = marks[pid];
-    const markBtns = `
-      <div style="margin-top:8px;border-top:1px solid #eee;padding-top:6px;">
-        <div style="font-size:0.75rem;color:#888;margin-bottom:4px;">マーク色：</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
-          <div onclick="setMark('${pid}','');this.closest('.leaflet-popup-content').innerHTML=buildPopupContent('${pid}')" style="width:22px;height:22px;border-radius:50%;background:#eee;border:2px dashed #aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;color:#999">×</div>
-          ${['#e74c3c','#e67e22','#f1c40f','#27ae60','#2980b9','#8e44ad'].map(c =>
-            `<div onclick="setMark('${pid}','${c}');document.querySelector('.leaflet-popup-content').innerHTML=buildPopupContent('${pid}')"
-              style="width:22px;height:22px;border-radius:50%;background:${c};cursor:pointer;border:${mark&&mark.color===c?'3px solid #333':'2px solid #fff'};box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>`
-          ).join('')}
-        </div>
-        ${mark ? `<div style="margin-top:4px;font-size:0.75rem;color:#555;">● <span style="color:${mark.color}">${mark.label||'マーク済み'}</span></div>` : ''}
-      </div>`;
-    return `
-      <div class="popup-title">${p.icon} ${LABELS[p.category]||p.category} ${srcTag}</div>
-      <div class="popup-price" style="color:${p.color}">${p.price}</div>
-      <div class="popup-row"><span>住所：</span>${p.address}</div>
-      ${sqmStr ? `<div class="popup-row"><span>面積：</span>${sqmStr}${tsuboStr}</div>` : ""}
-      ${ptStr}${bcStr}
-      <div class="popup-row"><span>初回掲載：</span>${p.first_seen}</div>
-      <div class="popup-propno">物件番号：${propNo}</div>
-      ${urlStr}
-      ${markBtns}
-    `;
-  };
+function setMarkAndRefresh(pid, color) {
+  setMark(pid, color);
+  // 開いているポップアップを更新
+  const obj = propMarkers[pid];
+  if (obj && obj.marker.isPopupOpen()) {
+    obj.marker.getPopup().setContent(buildPopupHtml(pid));
+  }
+}
 
-  // buildPopupContent をグローバルに登録
-  propMarkers[p.id] = propMarkers[p.id] || {};
-  window['buildPopupContent'] = window['buildPopupContent'] || {};
+const propMarkers = {};
+PROPS.forEach((p, i) => {
+  const marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.color, p.icon) });
 
-  const popup = L.popup({ maxWidth: 280 });
-  marker.on('click', () => {
-    popup.setContent(buildPopup(p.id));
-    marker.bindPopup(popup).openPopup();
-  });
-  marker.bindPopup(popup);
+  // LeafletのbindPopup にfunction渡しで毎回最新HTMLを生成
+  marker.bindPopup(() => buildPopupHtml(p.id), { maxWidth: 280 });
 
   propMarkers[p.id] = { marker, category: p.category };
   marker.addTo(map);
