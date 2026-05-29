@@ -47,6 +47,18 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
 .source-reins { background: #ecf0f1; color: #555; }
 .source-takken { background: #fef9e7; color: #7d6608; border: 1px solid #f0ca4d; }
 
+/* お気に入り */
+.fav-btn {
+  cursor: pointer; font-size: 1.1rem; line-height: 1;
+  border: none; background: none; padding: 0 2px;
+  transition: transform 0.15s;
+  user-select: none;
+}
+.fav-btn:hover { transform: scale(1.2); }
+.card-fav { float: right; font-size: 1.2rem; cursor: pointer; }
+.fbtn.on.fav { background: #e74c3c; border-color: #e74c3c; color: #fff; }
+.fbtn.fav { border-color: #e74c3c; color: #e74c3c; }
+
 #list { flex: 1; overflow-y: auto; padding: 6px; }
 .card {
   border: 1px solid #e8e8e8; border-radius: 7px; padding: 9px 10px;
@@ -137,7 +149,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   <span class="badge">🌿 土地 317件</span>
   <span class="badge">🏠 中古住宅 228件</span>
   <span class="badge">🏢 マンション 17件</span>
-  <span id="updated">更新: 2026年05月29日 22:43</span>
+  <span id="updated">更新: 2026年05月30日 08:51</span>
 </div>
 <div id="wrap">
   <div id="sidebar">
@@ -147,6 +159,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
         <div class="fbtn on land"    data-cat="land"    onclick="toggle(this)">🌿 土地</div>
         <div class="fbtn on house"   data-cat="house"   onclick="toggle(this)">🏠 住宅</div>
         <div class="fbtn on mansion" data-cat="mansion" onclick="toggle(this)">🏢 マンション</div>
+        <div class="fbtn fav"        data-cat="fav"     onclick="toggle(this)">⭐ お気に入り</div>
       </div>
       <div style="font-size:0.7rem;color:#999;margin-top:5px;">
         🔵 REINS　🟡 たっけんくんネット
@@ -201,46 +214,107 @@ PROPS.forEach((p, i) => {
   const srcTag = `<span class="source-tag ${p.source==='宅建'?'source-takken':'source-reins'}">${p.source}</span>`;
   const urlStr = p.url ? `<div style="margin-top:6px"><a href="${p.url}" target="_blank" style="color:#2980b9;font-size:0.8rem;">詳細を見る →</a></div>` : "";
 
-  marker.bindPopup(`
-    <div class="popup-title">${p.icon} ${LABELS[p.category]||p.category} ${srcTag}</div>
-    <div class="popup-price" style="color:${p.color}">${p.price}</div>
-    <div class="popup-row"><span>住所：</span>${p.address}</div>
-    ${sqmStr ? `<div class="popup-row"><span>面積：</span>${sqmStr}${tsuboStr}</div>` : ""}
-    ${ptStr}${bcStr}
-    <div class="popup-row"><span>初回掲載：</span>${p.first_seen}</div>
-    <div class="popup-propno">物件番号：${propNo}</div>
-    ${urlStr}
-  `, { maxWidth: 270 });
+  const buildPopup = (pid) => {
+    const isFav = favorites.has(pid);
+    return `
+      <div class="popup-title">${p.icon} ${LABELS[p.category]||p.category} ${srcTag}
+        <button class="fav-btn" onclick="toggleFav('${pid}', this); this.closest('.leaflet-popup').querySelector('.popup-title .fav-btn').textContent = favorites.has('${pid}') ? '⭐' : '☆';" style="float:right">${isFav?'⭐':'☆'}</button>
+      </div>
+      <div class="popup-price" style="color:${p.color}">${p.price}</div>
+      <div class="popup-row"><span>住所：</span>${p.address}</div>
+      ${sqmStr ? `<div class="popup-row"><span>面積：</span>${sqmStr}${tsuboStr}</div>` : ""}
+      ${ptStr}${bcStr}
+      <div class="popup-row"><span>初回掲載：</span>${p.first_seen}</div>
+      <div class="popup-propno">物件番号：${propNo}</div>
+      ${urlStr}
+    `;
+  };
+
+  const popup = L.popup({ maxWidth: 270 });
+  marker.on('click', () => {
+    popup.setContent(buildPopup(p.id));
+    marker.bindPopup(popup).openPopup();
+  });
+  marker.bindPopup(popup);
 
   propMarkers[p.id] = { marker, category: p.category };
   marker.addTo(map);
 });
 
-const filterState = { land: true, house: true, mansion: true };
+// --- お気に入り管理 ---
+const FAV_KEY = 'reins_map_favorites';
+let favorites = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]'));
+
+function saveFavorites() {
+  localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+}
+
+function toggleFav(id, btn) {
+  if (favorites.has(id)) {
+    favorites.delete(id);
+    if (btn) btn.textContent = '☆';
+  } else {
+    favorites.add(id);
+    if (btn) btn.textContent = '⭐';
+  }
+  saveFavorites();
+  updateMarkerIcons();
+  renderList();
+}
+
+function updateMarkerIcons() {
+  PROPS.forEach(p => {
+    const obj = propMarkers[p.id];
+    if (!obj) return;
+    const isFav = favorites.has(p.id);
+    obj.marker.setIcon(makeIcon(isFav ? '#f39c12' : p.color, isFav ? '⭐' : p.icon));
+  });
+}
+
+const filterState = { land: true, house: true, mansion: true, fav: false };
 
 function toggle(btn) {
   const grp = btn.dataset.cat;
   filterState[grp] = !filterState[grp];
   btn.classList.toggle("on");
+
+  if (grp === 'fav') {
+    // お気に入りフィルター：他フィルターと独立
+  } else {
+    Object.values(propMarkers).forEach(obj => {
+      if (CAT_GROUP[obj.category] === grp) {
+        const show = filterState[grp] && (!filterState.fav || favorites.has(obj.id));
+        show ? obj.marker.addTo(map) : map.removeLayer(obj.marker);
+      }
+    });
+  }
+
+  // 全マーカーの表示を再評価
   Object.values(propMarkers).forEach(obj => {
-    if (CAT_GROUP[obj.category] === grp) {
-      filterState[grp] ? obj.marker.addTo(map) : map.removeLayer(obj.marker);
-    }
+    const grpName = CAT_GROUP[obj.category];
+    const show = filterState[grpName] && (!filterState.fav || favorites.has(obj.id));
+    show ? obj.marker.addTo(map) : map.removeLayer(obj.marker);
   });
+
   renderList();
 }
 
 function renderList() {
   const el = document.getElementById("list");
-  const visible = PROPS.filter(p => filterState[CAT_GROUP[p.category]]);
+  const visible = PROPS.filter(p =>
+    filterState[CAT_GROUP[p.category]] &&
+    (!filterState.fav || favorites.has(p.id))
+  );
   el.innerHTML = visible.map(p => {
     const tsuboDetail = p.tsubo
       ? `${p.tsubo}坪${p.price_per_tsubo ? " / 坪" + p.price_per_tsubo.toLocaleString() + "円" : ""}`
       : "";
     const srcCls = p.source === '宅建' ? 'source-takken' : 'source-reins';
+    const isFav = favorites.has(p.id);
     return `<div class="card" onclick="focusProp('${p.id}')">
       <span class="cat-tag" style="background:${p.color}">${LABELS[p.category]||p.category}</span>
       <span class="source-tag ${srcCls}">${p.source}</span>
+      <span class="card-fav" onclick="event.stopPropagation();toggleFav('${p.id}',this)">${isFav?'⭐':'☆'}</span>
       <div class="card-price">${p.price}</div>
       <div class="card-addr">${p.address||"（住所なし）"}</div>
       ${tsuboDetail ? `<div class="card-detail">${tsuboDetail}</div>` : ""}
@@ -255,6 +329,7 @@ function focusProp(id) {
   obj.marker.openPopup();
 }
 
+updateMarkerIcons();
 renderList();
 </script>
 </body>
