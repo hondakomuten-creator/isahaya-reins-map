@@ -1,0 +1,20 @@
+# 機密情報・個人情報
+config.json
+reins_data.db
+
+# ログファイル
+*.log
+
+# デバッグ用（開発時のみ）
+debug_output/
+debug_*.py
+analyze_*.py
+check_*.py
+test_*.py
+__pycache__/
+
+# データベース
+*.db
+
+# 一時ファイル
+*.pyc
