@@ -76,6 +76,59 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
 .popup-row { font-size: 0.85rem; color: #444; margin: 2px 0; }
 .popup-row span { color: #888; }
 .popup-propno { font-size: 0.75rem; color: #aaa; margin-top: 6px; }
+
+/* ===== スマホ対応 (768px以下) ===== */
+@media (max-width: 768px) {
+  #header { padding: 8px 12px; gap: 6px; }
+  #header h1 { font-size: 0.95rem; width: 100%; }
+  .badge { font-size: 0.72rem; padding: 2px 8px; }
+  #updated { margin-left: 0; font-size: 0.7rem; }
+
+  /* 縦並び：地図を上、サイドバーを下 */
+  #wrap { flex-direction: column; height: auto; min-height: 100vh; }
+
+  #map {
+    height: 55vh;
+    min-height: 300px;
+    width: 100%;
+    flex: none;
+  }
+
+  #sidebar {
+    width: 100%;
+    min-width: unset;
+    height: auto;
+    max-height: 45vh;
+    border-right: none;
+    border-top: 2px solid #ddd;
+    flex-direction: column;
+  }
+
+  .panel { padding: 8px 12px; }
+  .panel h3 { font-size: 0.85rem; }
+
+  /* フィルターボタンを大きく */
+  .fbtn {
+    padding: 7px 14px;
+    font-size: 0.85rem;
+    border-radius: 20px;
+  }
+
+  #list { max-height: 32vh; overflow-y: auto; padding: 6px; }
+
+  /* カードを横スクロール対応 */
+  .card { padding: 8px 10px; margin-bottom: 5px; }
+  .card-price { font-size: 1rem; }
+  .card-addr { font-size: 0.78rem; }
+
+  /* ポップアップを大きく */
+  .leaflet-popup-content {
+    font-size: 0.9rem;
+    min-width: 200px;
+  }
+  .popup-price { font-size: 1.15rem; }
+  .popup-row { font-size: 0.88rem; }
+}
 </style>
 </head>
 <body>
@@ -84,7 +137,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   <span class="badge">🌿 土地 236件</span>
   <span class="badge">🏠 中古住宅 216件</span>
   <span class="badge">🏢 マンション 17件</span>
-  <span id="updated">更新: 2026年05月29日 21:38</span>
+  <span id="updated">更新: 2026年05月29日 22:04</span>
 </div>
 <div id="wrap">
   <div id="sidebar">
