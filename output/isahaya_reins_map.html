@@ -178,7 +178,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   <span class="badge">🌿 土地 317件</span>
   <span class="badge">🏠 中古住宅 228件</span>
   <span class="badge">🏢 マンション 17件</span>
-  <span id="updated">更新: 2026年05月30日 09:28</span>
+  <span id="updated">更新: 2026年05月30日 09:30</span>
 </div>
 <div id="wrap">
   <div id="sidebar">
@@ -265,8 +265,8 @@ function buildPopupHtml(pid) {
   const srcTag = `<span class="source-tag ${p.source==='宅建'?'source-takken':'source-reins'}">${p.source}</span>`;
   const urlStr = p.url ? `<div style="margin-top:6px"><a href="${p.url}" target="_blank" style="color:#2980b9;font-size:0.8rem;">詳細を見る →</a></div>` : "";
   const mark = marks[pid];
-  const COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#2980b9','#8e44ad'];
-  const colorBtns = COLORS.map(c =>
+  const MARK_COLORS = ['#e74c3c','#e67e22','#f1c40f','#27ae60','#2980b9','#8e44ad'];
+  const colorBtns = MARK_COLORS.map(c =>
     `<div onclick="setMarkAndRefresh('${pid}','${c}')"
       style="width:24px;height:24px;border-radius:50%;background:${c};cursor:pointer;
              border:${mark&&mark.color===c?'3px solid #333':'2px solid #fff'};
@@ -324,8 +324,7 @@ const LABEL_KEY = 'reins_map_labels';  // {color: label}
 
 let marks = JSON.parse(localStorage.getItem(MARK_KEY) || '{}');
 let colorLabels = JSON.parse(localStorage.getItem(LABEL_KEY) || '{}');
-let selectedColor = '';   // 現在選択中の色
-let filterColor = null;   // フィルター中の色（null=全て）
+let filterColor = null;  // マーク色フィルター（null=全て）
 
 function saveMarks() {
   localStorage.setItem(MARK_KEY, JSON.stringify(marks));
@@ -334,14 +333,10 @@ function saveLabels() {
   localStorage.setItem(LABEL_KEY, JSON.stringify(colorLabels));
 }
 
+// カラースウォッチ選択（見た目の切り替えのみ）
 function selectColor(swatch) {
-  selectedColor = swatch.dataset.color;
   document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
   swatch.classList.add('selected');
-}
-
-function getColorLabel(color) {
-  return colorLabels[color] || '';
 }
 
 function setMark(id, color) {
