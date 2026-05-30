@@ -71,8 +71,12 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   flex-shrink: 0;
 }
 .card-mark { float: right; margin-left: 4px; }
-.fbtn.on.fav { background: #7f8c8d; border-color: #7f8c8d; color: #fff; }
-.fbtn.fav { border-color: #7f8c8d; color: #7f8c8d; }
+.fbtn.on.fav    { background: #7f8c8d; border-color: #7f8c8d; color: #fff; }
+.fbtn.fav       { border-color: #7f8c8d; color: #7f8c8d; }
+.fbtn.on.reins  { background: #2471a3; border-color: #2471a3; color: #fff; }
+.fbtn.reins     { border-color: #2471a3; color: #2471a3; }
+.fbtn.on.takken { background: #b7950b; border-color: #b7950b; color: #fff; }
+.fbtn.takken    { border-color: #b7950b; color: #b7950b; }
 
 /* カラーフィルター */
 #color-filter-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -174,7 +178,7 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
   <span class="badge">🌿 土地 317件</span>
   <span class="badge">🏠 中古住宅 228件</span>
   <span class="badge">🏢 マンション 17件</span>
-  <span id="updated">更新: 2026年05月30日 09:20</span>
+  <span id="updated">更新: 2026年05月30日 09:28</span>
 </div>
 <div id="wrap">
   <div id="sidebar">
@@ -186,8 +190,9 @@ body { font-family: "Meiryo", "Noto Sans JP", sans-serif; background: #f0f0f0; }
         <div class="fbtn on mansion" data-cat="mansion" onclick="toggle(this)">🏢 マンション</div>
         <div class="fbtn fav"        data-cat="fav"     onclick="toggle(this)">🏷 マーク済み</div>
       </div>
-      <div style="font-size:0.7rem;color:#999;margin-top:5px;">
-        🔵 REINS　🟡 たっけんくんネット
+      <div class="filter-row" style="margin-top:6px;">
+        <div class="fbtn on reins"  data-cat="reins"  onclick="toggle(this)">🔵 REINS</div>
+        <div class="fbtn on takken" data-cat="takken" onclick="toggle(this)">🟡 たっけんくん</div>
       </div>
     </div>
 
@@ -407,14 +412,21 @@ function setColorFilter(color) {
   renderList();
 }
 
-const filterState = { land: true, house: true, mansion: true, fav: false };
+// フィルター状態
+const filterState = {
+  land: true, house: true, mansion: true,
+  fav: false,
+  reins: true, takken: true  // 情報源フィルター
+};
 
 function applyVisibility() {
-  Object.values(propMarkers).forEach(obj => {
+  // propMarkers はキー=id, 値={marker,category} なので entries で回す
+  Object.entries(propMarkers).forEach(([id, obj]) => {
     const grpName = CAT_GROUP[obj.category];
-    let show = filterState[grpName];
-    if (filterState.fav) show = show && !!marks[obj.id];
-    if (filterColor !== null) show = show && marks[obj.id] && marks[obj.id].color === filterColor;
+    const src = obj.category.endsWith('_tk') ? 'takken' : 'reins';
+    let show = filterState[grpName] && filterState[src];
+    if (filterState.fav) show = show && !!marks[id];
+    if (filterColor !== null) show = show && !!(marks[id] && marks[id].color === filterColor);
     show ? obj.marker.addTo(map) : map.removeLayer(obj.marker);
   });
 }
@@ -431,7 +443,9 @@ function renderList() {
   const el = document.getElementById("list");
   const visible = PROPS.filter(p => {
     const grp = CAT_GROUP[p.category];
+    const src = p.category.endsWith('_tk') ? 'takken' : 'reins';
     if (!filterState[grp]) return false;
+    if (!filterState[src]) return false;
     if (filterState.fav && !marks[p.id]) return false;
     if (filterColor !== null && (!marks[p.id] || marks[p.id].color !== filterColor)) return false;
     return true;
