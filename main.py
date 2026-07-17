@@ -93,13 +93,24 @@ def main():
 
     for attempt in range(1, 4):
         try:
-            subprocess.run(["git", "push", "origin", "main"], cwd=repo_dir, check=True)
+            # timeout=120: 120秒以内に完了しなければ強制終了してリトライ
+            subprocess.run(
+                ["git", "push", "origin", "main"],
+                cwd=repo_dir, check=True, timeout=120
+            )
             log.info("GitHub Pages 更新完了")
             break
+        except subprocess.TimeoutExpired:
+            log.warning(f"Git push タイムアウト（{attempt}回目）")
+            if attempt < 3:
+                log.info("60秒後にリトライします...")
+                time.sleep(60)
+            else:
+                log.error("Git push 3回タイムアウト。次回の自動実行時に再試行されます。")
         except subprocess.CalledProcessError as e:
             log.warning(f"Git push 失敗（{attempt}回目）: {e}")
             if attempt < 3:
-                log.info(f"60秒後にリトライします...")
+                log.info("60秒後にリトライします...")
                 time.sleep(60)
             else:
                 log.error("Git push 3回失敗。次回の自動実行時に再試行されます。")
