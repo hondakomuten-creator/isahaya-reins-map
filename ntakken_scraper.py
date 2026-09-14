@@ -42,10 +42,10 @@ SEARCH_TARGETS = [
     ("land_tk",    "0101", 7000000,  "土地",     "42204", None),
     ("house_tk",   "9102", 10000000, "中古住宅", "42204", None),
     ("mansion_tk", "0103", 10000000, "マンション","42204", None),
-    # 大村市：全域
-    ("land_tk",    "0101", 7000000,  "土地",     "42207", None),
-    ("house_tk",   "9102", 10000000, "中古住宅", "42207", None),
-    ("mansion_tk", "0103", 10000000, "マンション","42207", None),
+    # 大村市：全域（city_code=42206 ※たっけんくんのコードはJIS+1）
+    ("land_tk",    "0101", 7000000,  "土地",     "42206", None),
+    ("house_tk",   "9102", 10000000, "中古住宅", "42206", None),
+    ("mansion_tk", "0103", 10000000, "マンション","42206", None),
     # 雲仙市：愛野町・吾妻町のみ
     ("land_tk",    "0101", 5000000,  "土地",     "42213", ["愛野町", "吾妻町"]),
     ("house_tk",   "9102", 7000000,  "中古住宅", "42213", ["愛野町", "吾妻町"]),
@@ -357,7 +357,7 @@ def run_scrape():
 
     try:
         for category, ptm, min_price, label, city_code, include_areas in SEARCH_TARGETS:
-            city_name = {"42204": "諫早市", "42207": "大村市", "42213": "雲仙市"}.get(city_code, city_code)
+            city_name = {"42204": "諫早市", "42206": "大村市", "42213": "雲仙市"}.get(city_code, city_code)
             area_str = f"（{'・'.join(include_areas)}）" if include_areas else ""
             log.info(f"=== たっけんくん: {city_name}{area_str} {label} 検索開始 ===")
             props = collect_category(driver, category, ptm, min_price, label,
