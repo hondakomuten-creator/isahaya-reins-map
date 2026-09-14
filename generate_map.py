@@ -377,10 +377,9 @@ const CAT_GROUP = {{
 }};
 
 const map = L.map("map").setView([32.8398, 130.0551], 13);
-L.tileLayer("https://{{s}}.basemaps.cartocdn.com/rastertiles/voyager/{{z}}/{{x}}/{{y}}{{r}}.png", {{
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd',
-  maxZoom: 19,
+L.tileLayer("https://cyberjapandata.gsi.go.jp/xyz/pale/{{z}}/{{x}}/{{y}}.png", {{
+  attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>',
+  maxZoom: 18,
 }}).addTo(map);
 
 function makeIcon(color, emoji, isNew) {{

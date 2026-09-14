@@ -42,6 +42,10 @@ SEARCH_TARGETS = [
     ("land_tk",    "0101", 7000000,  "土地",     "42204", None),
     ("house_tk",   "9102", 10000000, "中古住宅", "42204", None),
     ("mansion_tk", "0103", 10000000, "マンション","42204", None),
+    # 大村市：全域
+    ("land_tk",    "0101", 7000000,  "土地",     "42207", None),
+    ("house_tk",   "9102", 10000000, "中古住宅", "42207", None),
+    ("mansion_tk", "0103", 10000000, "マンション","42207", None),
     # 雲仙市：愛野町・吾妻町のみ
     ("land_tk",    "0101", 5000000,  "土地",     "42213", ["愛野町", "吾妻町"]),
     ("house_tk",   "9102", 7000000,  "中古住宅", "42213", ["愛野町", "吾妻町"]),
@@ -287,7 +291,7 @@ class TakkenDB:
             ))
             return "added"
 
-    def deactivate_missing(self, category, active_ids, include_areas=None):
+    def deactivate_missing(self, category, active_ids, include_areas=None, city=None):
         now = datetime.now().isoformat()
         if include_areas:
             area_filter = " OR ".join([f"address LIKE ?" for _ in include_areas])
@@ -305,6 +309,16 @@ class TakkenDB:
                     f"WHERE category=? AND is_active=1 AND ({area_filter})",
                     [now, category] + area_params
                 )
+        elif city:
+            # 市名でフィルター（諫早市と大村市が同カテゴリでも互いに消さない）
+            if not active_ids:
+                return 0
+            ph = ",".join(["?"] * len(active_ids))
+            cur = self.conn.execute(
+                f"UPDATE properties SET is_active=0, last_seen=? "
+                f"WHERE category=? AND is_active=1 AND address LIKE ? AND id NOT IN ({ph})",
+                [now, category, f"%{city}%"] + active_ids
+            )
         else:
             if not active_ids:
                 return 0
@@ -343,7 +357,7 @@ def run_scrape():
 
     try:
         for category, ptm, min_price, label, city_code, include_areas in SEARCH_TARGETS:
-            city_name = "雲仙市" if city_code == "42213" else "諫早市"
+            city_name = {"42204": "諫早市", "42207": "大村市", "42213": "雲仙市"}.get(city_code, city_code)
             area_str = f"（{'・'.join(include_areas)}）" if include_areas else ""
             log.info(f"=== たっけんくん: {city_name}{area_str} {label} 検索開始 ===")
             props = collect_category(driver, category, ptm, min_price, label,
@@ -358,7 +372,7 @@ def run_scrape():
                 if result == "added":
                     new_count += 1
 
-            removed = db.deactivate_missing(category, active_ids, include_areas)
+            removed = db.deactivate_missing(category, active_ids, include_areas, city=city_name if not include_areas else None)
             db.log_scan(category, len(props), new_count, removed)
             log.info(f"  新規: {new_count}件 / 削除: {removed}件")
             time.sleep(1)
