@@ -14,6 +14,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from geocoder import geocode_address
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -368,7 +369,17 @@ def run_scrape():
 
             active_ids = []
             new_count = 0
+            geocoded_count = 0
             for prop in props:
+                # マップリンクなしの場合、ジオコーディングで補完
+                if not prop.get("latitude") and prop.get("address"):
+                    lat, lng = geocode_address(prop["address"])
+                    if lat:
+                        prop["latitude"] = lat
+                        prop["longitude"] = lng
+                        geocoded_count += 1
+                        log.info(f"    ジオコーディング補完: {prop['address']} → ({lat:.6f}, {lng:.6f})")
+                    import time as _t; _t.sleep(0.3)
                 result = db.upsert(prop)
                 active_ids.append(prop["id"])
                 if result == "added":
@@ -376,7 +387,7 @@ def run_scrape():
 
             removed = db.deactivate_missing(category, active_ids, include_areas, city=city_name if not include_areas else None)
             db.log_scan(category, len(props), new_count, removed)
-            log.info(f"  新規: {new_count}件 / 削除: {removed}件")
+            log.info(f"  新規: {new_count}件 / 削除: {removed}件 / ジオコーディング補完: {geocoded_count}件")
             time.sleep(1)
 
     finally:
